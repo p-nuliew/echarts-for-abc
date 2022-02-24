@@ -1,9 +1,5 @@
-import React, {Component} from 'react'
+import { Test } from './exports'
 
-export default class extends Component {
-  render() {
-    return <div>
-      <h2>Welcome to React components</h2>
-    </div>
-  }
+export {
+  Test
 }
