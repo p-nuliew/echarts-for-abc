@@ -1,16 +1,13 @@
 # echarts-for-abc
 
-[![Travis][build-badge]][build]
-[![npm package][npm-badge]][npm]
-[![Coveralls][coveralls-badge]][coveralls]
+### 介绍
+- 一个轻量、定制化的基础图表库
 
-Describe echarts-for-abc here.
+### 框架
+- 使用nwb构建框架，参考 https://juejin.cn/post/7035948119342727198#heading-7
 
-[build-badge]: https://img.shields.io/travis/user/repo/master.png?style=flat-square
-[build]: https://travis-ci.org/user/repo
+### 开发
+npm start
 
-[npm-badge]: https://img.shields.io/npm/v/npm-package.png?style=flat-square
-[npm]: https://www.npmjs.org/package/npm-package
-
-[coveralls-badge]: https://img.shields.io/coveralls/user/repo/master.png?style=flat-square
-[coveralls]: https://coveralls.io/github/user/repo
+### 打包
+npm build
