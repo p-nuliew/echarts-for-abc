@@ -1,5 +1,6 @@
-import { Test } from './exports'
+import { Test, KLine } from './exports'
 
 export {
-  Test
+  Test,
+  KLine,
 }
