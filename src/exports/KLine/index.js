@@ -33,6 +33,8 @@ const TEXT_COLOR = {
   SECOND: '#666',
 }
 
+
+
 const KLine = ({ propsConfig , loadData }) => {
   // 配置项
   const config = {
@@ -64,7 +66,9 @@ const KLine = ({ propsConfig , loadData }) => {
     ...propsConfig
   }
 
-  // if (data.length === 0) return null
+  let myDataSource = []
+  let myLeftDataSource = []
+  let myRightDataSource = []
 
   const {
     yAxisSplitNumber,
@@ -80,53 +84,28 @@ const KLine = ({ propsConfig , loadData }) => {
     maxShowSize,
   } = config
 
-  const [ctx, setCtx] = useState(null)  // canvas上下文
-  const [canvasProperty, setCanvasProperty] = useState({
-    canvasWidth: '',
-    canvasHeight: '',
-    yAxisOriginPointY: '',
-    yAxisHeight: '',
-    yAxisTickSpace: '',
-    xAxisVertexX: '',
-    xAxisWidth: '',
-    xAxisItemSpace: '',
-  })
+  let ctx = ''
+  let canvasWidth = ''
+  let canvasHeight = ''
+  let yAxisOriginPointY = ''
+  let yAxisHeight = ''
+  let yAxisTickSpace = ''
+  let xAxisVertexX = ''
+  let xAxisWidth = ''
+  let xAxisItemSpace = ''
 
-  const [init, setInit] = useState(true)
-  const [pageSize, setPageSize] = useState(10)
-  const [dataSource, setDataSource] = useState([])
-  const [leftData, setLeftData] = useState([{b: 1}])
-  const [rightData, setRightData] = useState([])
+  let init = true
 
+  let pageSize = 10
 
-  // 一页展示多少条数据
-    // pageSize: data.length / 2,
-  // let { leftData: cloneLeftData, data: cloneData, rightData: cloneRightData } = dataSource
-  // console.log('dataSource: ', dataSource);
+  // const [init, setInit] = useState(true)
+  // const [pageSize, setPageSize] = useState(10)
+  // const [dataSource, setDataSource] = useState([])
+  // const [leftData, setLeftData] = useState([{b: 1}])
+  // const [rightData, setRightData] = useState([])
 
-  // 绘制画布时，实时变化的变量
-  // // 最高价
-  // const [maxPrice, setMaxPrice] = useState('')
-  // // 最低价
-  // const [minPrice, setMinPrice] = useState('')
-  // // x轴元素数量
-  // const [xAxisItemLength, setXAxisItemLength] = useState(cloneData.length)
-  // // x轴展示间隔数（不包括最后一个元素）
-  // // 也就是余数，蜡烛数量越多，余数越大，刻度展示的数量越少
-  // const [remainder, setRemainder] = useState(Math.ceil(cloneData.length / 5))
 
   const xAxisItemLength = pageSize
-
-  const {
-    canvasWidth,
-    canvasHeight,
-    yAxisOriginPointY,
-    yAxisHeight,
-    yAxisTickSpace,
-    xAxisVertexX,
-    xAxisWidth,
-    xAxisItemSpace,
-  } = canvasProperty
 
   // y轴横坐标
   const yAxisPointX = padding.left
@@ -258,6 +237,8 @@ const KLine = ({ propsConfig , loadData }) => {
     if (!tipCanvas.getContext) return
     const ctxTip = tipCanvas.getContext('2d');
 
+    console.log(123);
+
     // 提示框元素宽度
     let tipInfoElWidth = 100
     // 提示框内的日期元素
@@ -281,9 +262,10 @@ const KLine = ({ propsConfig , loadData }) => {
       const { offsetX, offsetY } = e
       // 清除画布
       ctxTip.clearRect(0, 0, canvasWidth, canvasHeight)
-
+      console.log('isContentArea(e): ', isContentArea(e));
       // 不在内容区域则不进行绘制
       if (!isContentArea(e)) return
+
 
       // 绘制水平辅助线
       ctxTip.beginPath();
@@ -435,9 +417,12 @@ const KLine = ({ propsConfig , loadData }) => {
       const draggableNode = document.getElementById('draggable')
       draggableNode.style.cursor = 'grabbing'
 
-      const cloneLeftData = _.clone(leftData)
-      const cloneData = _.clone(dataSource)
-      const cloneRightData = _.clone(rightData)
+
+      const cloneLeftData = myLeftDataSource
+      const cloneData = myDataSource
+      const cloneRightData = myRightDataSource
+
+
 
       // 如果拖动距离大于x轴元素间距，则插入
       if ( horizontalDragDistance > xAxisItemSpace) {
@@ -448,11 +433,12 @@ const KLine = ({ propsConfig , loadData }) => {
           // 往右拖动
           if (lastPosition < offsetX) {
             // 如果左侧数据全部显示完成，则不绘制
+
             if (cloneLeftData.length === 0) return
 
             // 请求数据：如果左侧数据小于最小展示条数，请求接口数据
             if (cloneLeftData.length < pageSize) {
-              // console.log('请求左侧数据，并赋值给cloneLeftData');
+              console.log('请求左侧数据，并赋值给cloneLeftData');
             }
 
             cloneData.unshift(cloneLeftData.pop())
@@ -473,11 +459,11 @@ const KLine = ({ propsConfig , loadData }) => {
         }
         console.log('拖拽中....');
 
-        _dataSource = {
-          leftData: cloneLeftData,
-          data: cloneData,
-          rightData: cloneRightData
-        }
+        // _dataSource = {
+        //   leftData: cloneLeftData,
+        //   data: cloneData,
+        //   rightData: cloneRightData
+        // }
 
         // 记录插入数据时的光标位置
         insertPosition = offsetX
@@ -490,7 +476,16 @@ const KLine = ({ propsConfig , loadData }) => {
         // TODO 这种方式存在闪屏问题
         // 监听dataSource, dataSource发生改变时重新渲染renderKLineChart函数
         // setDataSource(_dataSource)
-        renderKLineChart(cloneData)
+        // renderKLineChart(cloneData)
+
+        // TODO 不能用setState
+        // 可使用 useRef
+        myDataSource = cloneData
+        myLeftDataSource = cloneLeftData
+        myRightDataSource = cloneRightData
+
+        renderKLineChart()
+
       }
 
       lastPosition = offsetX
@@ -531,9 +526,11 @@ const KLine = ({ propsConfig , loadData }) => {
   /**
    * 绘制k线图
    */
-   const renderKLineChart = (dataSource) => {
-     console.log('dataSource--------------: ', dataSource);
+   const renderKLineChart = () => {
+     console.log('dataSource--------------: ', myDataSource);
     // const { data: cloneData } = dataSource
+
+    const dataSource = myDataSource
 
     if (dataSource.length === 0) return
 
@@ -705,77 +702,66 @@ const KLine = ({ propsConfig , loadData }) => {
       renderCandles(dataYAxisPoint, candleW)
     }
 
-    setInit(false)
+    // setInit(false)
+    init = false
   }
 
-  // 获取canvas元素并设置canvas上下文
-  const canvasRef = useCallback(node => {
-    if (node !== null) {
-      if (node.getContext) {
-        const ctx = node.getContext('2d');
-        const { canvas: { width, height,  } } = ctx
-
-        // 可知条件
-        // y轴原点纵坐标
-        const yAxisOriginPointY = height - padding.bottom
-        // y轴高度
-        const yAxisHeight = height - (padding.top + padding.bottom)
-        // y轴刻度间距
-        const yAxisTickSpace = yAxisHeight / (yAxisSplitNumber - 1)
-        const yAxisPointX = padding.left
-        // x轴顶点横坐标
-        const xAxisVertexX = width - yAxisPointX
-        // x轴宽度
-        const xAxisWidth = width - yAxisPointX - padding.right
-        // x轴元素间距
-        const xAxisItemSpace = xAxisWidth / xAxisItemLength
-        console.log('xAxisItemSpace: ', xAxisItemSpace);
-
-        setCtx(ctx)
-        setCanvasProperty({
-          canvasWidth: width,
-          canvasHeight: height,
-          yAxisOriginPointY,
-          yAxisHeight,
-          yAxisTickSpace,
-          xAxisVertexX,
-          xAxisWidth,
-          xAxisItemSpace,
-        })
-      }
-    } else {
-      throw new Error('no support canvas');
-    }
-  }, []);
 
   // 得到上下文，开始初始化画布
   useEffect(() => {
-    if (ctx) {
+    // console.log('ctx: ', ctx);
+
+    // document.getElementById('canvas')
+    console.log('canvas', document.getElementById('canvas'));
+    ctx = document.getElementById('canvas').getContext('2d')
+
+    console.log('ctx: ', ctx);
+
+    const { canvas: { width, height,  } } = ctx
+
+    canvasWidth = width
+    canvasHeight = height
+
+    // 可知条件
+    // y轴原点纵坐标
+    yAxisOriginPointY = height - padding.bottom
+    // y轴高度
+    yAxisHeight = height - (padding.top + padding.bottom)
+    // y轴刻度间距
+    yAxisTickSpace = yAxisHeight / (yAxisSplitNumber - 1)
+    // yAxisPointX = padding.left
+    // x轴顶点横坐标
+    xAxisVertexX = width - yAxisPointX
+    // x轴宽度
+    xAxisWidth = width - yAxisPointX - padding.right
+    // x轴元素间距
+    xAxisItemSpace = xAxisWidth / xAxisItemLength
+    console.log('xAxisItemSpace: ', xAxisItemSpace);
+
+
+    // if (ctx) {
       loadData().then(res => {
         const data = res;
-        const pageSize = res.length / 2
+        pageSize = res.length / 2
 
-        setPageSize(pageSize)
-        // TODO 不知道什么原因
-        // setLeftData不能放在setDataSource，否则setLeftData无效
-        setLeftData(data.slice(0, pageSize))
-        setDataSource(data.slice(pageSize))
-
-        renderKLineChart(data.slice(pageSize))
+        myDataSource = data.slice(pageSize)
+        myLeftDataSource = data.slice(0, pageSize)
+        renderKLineChart()
       })
-    }
-  }, [ctx])
+  }, [])
 
   // useEffect(() => {
   //   renderKLineChart()
   // }, [dataSource])
 
 
+  console.log('-------------------------');
   return (
     <div id="kWrap">
-      <canvas id="canvas" ref={canvasRef} width="600" height="300"></canvas>
+      <canvas id="canvas" width="600" height="300"></canvas>
       <canvas id="tipCanvas" width="600" height="300"></canvas>
     </div>
   )
 }
-export default KLine
+export default React.memo(KLine)
+

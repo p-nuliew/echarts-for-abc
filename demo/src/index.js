@@ -24,6 +24,8 @@ const Demo = () => {
     return request({ pageSize, endTime })
   }
 
+  // new KLine(propsConfig,)
+
   return (
     <div>
       <h1>echarts-for-abc Demo</h1>
