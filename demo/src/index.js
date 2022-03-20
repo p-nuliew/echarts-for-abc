@@ -5,7 +5,7 @@ import { request } from '../../src/utils';
 
 import { Test, KLine } from '../../src'
 
-const propsConfig = {
+const initConfig = {
   yAxisSplitNumber: 6,
   showTips: true,
   canDrag: true,
@@ -24,14 +24,14 @@ const Demo = () => {
     return request({ pageSize, endTime })
   }
 
-  // new KLine(propsConfig,)
+  // new KLine(initConfig,)
 
   return (
     <div>
       <h1>echarts-for-abc Demo</h1>
       <Test />
       <KLine
-        propsConfig={propsConfig}
+        initConfig={initConfig}
         loadData={onRequestData}
       />
     </div>
