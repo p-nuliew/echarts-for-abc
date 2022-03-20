@@ -19,6 +19,8 @@ const Demo = () => {
    * @param {string} endTime 结束时间
    */
   const onRequestData = (pageSize = 20, endTime = moment().format('MM-DD') ) => {
+    console.log('endTime: ', endTime);
+    console.log('pageSize: ', pageSize);
     return request({ pageSize, endTime })
   }
 

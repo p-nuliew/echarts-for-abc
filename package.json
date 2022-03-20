@@ -20,6 +20,7 @@
     "test:watch": "nwb test-react --server"
   },
   "dependencies": {
+    "lodash": "^4.17.21",
     "moment": "^2.29.1"
   },
   "peerDependencies": {

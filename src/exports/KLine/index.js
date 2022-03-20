@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import moment from 'moment'
+import _ from 'lodash'
 // import { dataSource as data } from './config';
 import { request } from '../../utils';
 // import { useSyncCallback } from '../../hooks';
@@ -94,11 +94,9 @@ const KLine = ({ propsConfig , loadData }) => {
 
   const [init, setInit] = useState(true)
   const [pageSize, setPageSize] = useState(10)
-  const [dataSource, setDataSource] = useState({
-    leftData: [],
-    data: [],
-    rightData: []
-  })
+  const [dataSource, setDataSource] = useState([])
+  const [leftData, setLeftData] = useState([{b: 1}])
+  const [rightData, setRightData] = useState([])
 
 
   // 一页展示多少条数据
@@ -401,8 +399,7 @@ const KLine = ({ propsConfig , loadData }) => {
 
   // 拖拽
   const getDrag = () => {
-    let { leftData: cloneLeftData, data: cloneData, rightData: cloneRightData } = dataSource
-    console.log('dataSource: ', dataSource);
+
 
     // 水平拖动距离
     let horizontalDragDistance = 0
@@ -437,6 +434,10 @@ const KLine = ({ propsConfig , loadData }) => {
 
       const draggableNode = document.getElementById('draggable')
       draggableNode.style.cursor = 'grabbing'
+
+      const cloneLeftData = _.clone(leftData)
+      const cloneData = _.clone(dataSource)
+      const cloneRightData = _.clone(rightData)
 
       // 如果拖动距离大于x轴元素间距，则插入
       if ( horizontalDragDistance > xAxisItemSpace) {
@@ -488,7 +489,8 @@ const KLine = ({ propsConfig , loadData }) => {
 
         // TODO 这种方式存在闪屏问题
         // 监听dataSource, dataSource发生改变时重新渲染renderKLineChart函数
-        setDataSource(_dataSource)
+        // setDataSource(_dataSource)
+        renderKLineChart(cloneData)
       }
 
       lastPosition = offsetX
@@ -500,22 +502,45 @@ const KLine = ({ propsConfig , loadData }) => {
       const draggableNode = document.getElementById('draggable')
       draggableNode.style.display = 'none'
       draggableNode.style.cursor = 'default'
+
+
+      // 请求数据
+      // const cloneData = _.cloneDeep(dataSource)
+      // const cloneLeftData = _.cloneDeep(leftData)
+
+      // const cloneRightData = _.cloneDeep(rightData)
+
+      // loadData(pageSize, cloneLeftData[0].date).then(res => {
+      //   console.log('cloneLeftData: ', cloneLeftData);
+      //   console.log('res: ', res);
+      //   // const data = res;
+      //   // const pageSize = res.length / 2
+      //   console.log('[...res, ...cloneLeftData]: ', [...res, ...cloneLeftData]);
+      //   // setDataSource({
+      //   //   data: cloneData,
+      //   //   rightData: cloneRightData,
+      //   //   leftData: [...res, ...cloneLeftData],
+      //   // })
+      //   setDataSource(cloneData)
+      //   setLeftData([...res, ...cloneLeftData])
+      //   setRightData(cloneRightData)
+      // })
     }, false);
   }
 
   /**
    * 绘制k线图
    */
-   const renderKLineChart = () => {
+   const renderKLineChart = (dataSource) => {
      console.log('dataSource--------------: ', dataSource);
-    const { data: cloneData } = dataSource
+    // const { data: cloneData } = dataSource
 
-    if (cloneData.length === 0) return
+    if (dataSource.length === 0) return
 
-    const xAxisItemLength = cloneData.length
+    const xAxisItemLength = dataSource.length
     const remainder = Math.ceil(xAxisItemLength / 5)
-    const maxPrice = Math.max(...cloneData.map(x => x.heightPrice))
-    const minPrice = Math.min(...cloneData.map(x => x.lowPrice)) - 50
+    const maxPrice = Math.max(...dataSource.map(x => x.heightPrice))
+    const minPrice = Math.min(...dataSource.map(x => x.lowPrice)) - 50
 
     console.log('开始绘制k线图:', dataSource);
     console.log('maxPrice: ', maxPrice);
@@ -531,7 +556,7 @@ const KLine = ({ propsConfig , loadData }) => {
     }
 
     // 纵坐标集合
-    const dataYAxisPoint = cloneData.map(it => {
+    const dataYAxisPoint = dataSource.map(it => {
       const newIt = {}
       for (const key in it) {
         if (key === 'date') continue
@@ -545,7 +570,6 @@ const KLine = ({ propsConfig , loadData }) => {
         // 每个像素占多少钱
       const x = (maxPrice - minPrice) / yAxisHeight
       const num = (minPrice + yAxisTickSpace * i * x).toFixed(2)
-      console.log('num: ', num);
       return num
     }
 
@@ -567,7 +591,7 @@ const KLine = ({ propsConfig , loadData }) => {
 
       // 隔点展示
       if (i % remainder === 0 || i === xAxisItemLength - 1) {
-        renderText(ctx, xAxisTickX, yAxisOriginPointY + tickWidth + 10, cloneData.map((x) => x.date)[i], 'center', TEXT_COLOR.PRIMARY)
+        renderText(ctx, xAxisTickX, yAxisOriginPointY + tickWidth + 10, dataSource.map((x) => x.date)[i], 'center', TEXT_COLOR.PRIMARY)
         renderLine(xAxisTickX, yAxisOriginPointY, xAxisTickX, yAxisOriginPointY + tickWidth, COLOR.LINE)
       }
     }
@@ -674,7 +698,7 @@ const KLine = ({ propsConfig , loadData }) => {
     if (init) {
       // 绘制一串蜡烛
       oneByOneRenderCandle(dataYAxisPoint, candleW)
-      showTips && renderTipCanvas(cloneData, maxPrice, minPrice)
+      showTips && renderTipCanvas(dataSource, maxPrice, minPrice)
       canDrag && getDrag()
       // canScroll && setScroll()
     } else {
@@ -732,18 +756,19 @@ const KLine = ({ propsConfig , loadData }) => {
         const pageSize = res.length / 2
 
         setPageSize(pageSize)
-        setDataSource({
-          leftData: data.slice(0, pageSize),
-          data: data.slice(pageSize),
-          rightData: []
-        })
+        // TODO 不知道什么原因
+        // setLeftData不能放在setDataSource，否则setLeftData无效
+        setLeftData(data.slice(0, pageSize))
+        setDataSource(data.slice(pageSize))
+
+        renderKLineChart(data.slice(pageSize))
       })
     }
   }, [ctx])
 
-  useEffect(() => {
-    renderKLineChart()
-  }, [dataSource])
+  // useEffect(() => {
+  //   renderKLineChart()
+  // }, [dataSource])
 
 
   return (
