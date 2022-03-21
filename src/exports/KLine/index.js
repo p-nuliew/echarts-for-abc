@@ -63,6 +63,7 @@ const KLine = ({ initConfig , loadData }) => {
   let myLeftDataSource = []
   let myRightDataSource = []
 
+  // 初始变量
   let ctx = ''
   let canvasWidth = ''
   let canvasHeight = ''
@@ -71,18 +72,19 @@ const KLine = ({ initConfig , loadData }) => {
   let yAxisTickSpace = '' // y轴刻度间距
   let xAxisVertexX = '' // x轴顶点横坐标
   let xAxisWidth = '' // x轴宽度
-  let xAxisItemSpace = '' // // x轴元素间距
-
   let init = true
   let pageSize = 10
-  const xAxisItemLength = pageSize
 
+  // 初始常量
   // y轴横坐标
   const yAxisPointX = padding.left
   // y轴顶点纵坐标
   const yAxisVertexY = padding.top
   const contentHeightRate = 0.9 || 1
 
+  // 随画布元素数量变化而变化的属性
+  let xAxisItemSpace = '' // // x轴元素间距
+  let xAxisItemLength = pageSize
 
   // x轴刻度横坐标
   const xAxisTickPointX = (i) => {
@@ -201,13 +203,14 @@ const KLine = ({ initConfig , loadData }) => {
   /**
    * 绘制辅助线画布
    */
-  const renderTipCanvas = (myDataSource, maxPrice, minPrice) => {
+  const renderTipCanvas = () => {
     console.log('绘制辅助线画布');
     const tipCanvas = document.getElementById('tipCanvas');
     if (!tipCanvas.getContext) return
     const ctxTip = tipCanvas.getContext('2d');
 
-    console.log(123);
+    const maxPrice = Math.max(...myDataSource.map(x => x.heightPrice))
+    const minPrice = Math.min(...myDataSource.map(x => x.lowPrice)) - 50
 
     // 提示框元素宽度
     let tipInfoElWidth = 100
@@ -232,7 +235,6 @@ const KLine = ({ initConfig , loadData }) => {
       const { offsetX, offsetY } = e
       // 清除画布
       ctxTip.clearRect(0, 0, canvasWidth, canvasHeight)
-      console.log('isContentArea(e): ', isContentArea(e));
       // 不在内容区域则不进行绘制
       if (!isContentArea(e)) return
 
@@ -288,6 +290,7 @@ const KLine = ({ initConfig , loadData }) => {
       ctxTip.fill();
 
       const { date, heightPrice, lowPrice, openingPrice, closingPice } = myDataSource[xTipIndex]
+
       const dataArr = [
         { label: 'open', value: openingPrice },
         { label: 'close', value: closingPice },
@@ -351,8 +354,6 @@ const KLine = ({ initConfig , loadData }) => {
 
   // 拖拽
   const getDrag = () => {
-
-
     // 水平拖动距离
     let horizontalDragDistance = 0
     // 插入数据时的光标位置
@@ -421,7 +422,7 @@ const KLine = ({ initConfig , loadData }) => {
         //   data: myDataSource,
         //   rightData: myRightDataSource
 
-        // TODO 这种方式会存在闪屏问题（不能用setState）
+        // 注意：这种方式会存在闪屏问题（不能用setState）
         // 方法一：监听dataSource, dataSource发生改变时重新渲染renderKLineChart函数
         // setDataSource(_dataSource)
 
@@ -450,7 +451,7 @@ const KLine = ({ initConfig , loadData }) => {
 
       // 请求数据：如果左侧数据小于页数，请求接口数据
       if (myLeftDataSource.length < pageSize) {
-        console.log('左侧数据小于页数，请求左侧数据，并赋值给cloneLeftData');
+        console.log('request: 左侧数据小于页数，请求左侧数据，并赋值给myLeftDataSource');
 
         // 请求数据
         loadData(pageSize, myLeftDataSource[0].date).then(res => {
@@ -460,16 +461,69 @@ const KLine = ({ initConfig , loadData }) => {
     }, false);
   }
 
+  // 缩放
+  const getScroll = () => {
+    const kWrapNode = document.getElementById('kWrap')
+
+    // 监听滚轮事件（只考虑chrome）
+    // 如需兼容火狐和ie，参考 https://blog.csdn.net/u014205965/article/details/46045099
+    kWrapNode.addEventListener('wheel', function(e) {
+      const { deltaX, deltaY, ctrlKey } = e
+
+      // 方向判断
+      if (Math.abs(deltaX) !== 0 && Math.abs(deltaY) !== 0) return console.log('没有固定方向');
+      if (deltaX < 0) return console.log('向右');
+      if (deltaX > 0) return console.log('向左');
+
+      if (deltaY > 0) {
+        console.log('向上、放大');
+        // 最小展示条数
+        if (myDataSource.length <= pageSize) return
+
+        // 处理数据
+        myLeftDataSource.push(myDataSource.shift())
+        myRightDataSource.unshift(myDataSource.pop())
+      };
+      if (deltaY < 0) {
+        console.log('向下、缩小')
+        // 最多展示条数
+        if (myDataSource.length >= maxShowSize) {
+          let requesting = true
+           // 左侧数据为空时，请求数据
+          if (requesting && myLeftDataSource.length === 0) {
+            requesting = false
+            console.log('request: 左侧数据为空，请求左侧数据，并赋值');
+            // 请求数据
+            loadData(pageSize, myDataSource[0].date).then(res => {
+              console.log('请求结束');
+              myLeftDataSource = res
+              requesting = true
+            })
+          }
+          return
+        }
+
+        myDataSource = [myLeftDataSource.pop(), ...myDataSource]
+      }
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+      renderKLineChart()
+    }, false)
+  }
+
   /**
    * 绘制k线图
    */
    const renderKLineChart = () => {
     if (myDataSource.length === 0) return
 
-    const xAxisItemLength = myDataSource.length
+    xAxisItemLength = myDataSource.length
+    xAxisItemSpace = xAxisWidth / xAxisItemLength
+
     const remainder = Math.ceil(xAxisItemLength / 5)
     const maxPrice = Math.max(...myDataSource.map(x => x.heightPrice))
     const minPrice = Math.min(...myDataSource.map(x => x.lowPrice)) - 50
+
 
     console.log('--------开始绘制k线图');
 
@@ -624,12 +678,12 @@ const KLine = ({ initConfig , loadData }) => {
     renderBezierCurve(getControlPointInfo(curveType, dataYAxisPoint))
 
     if (init) {
-      // 绘制一串蜡烛
       oneByOneRenderCandle(dataYAxisPoint, candleW)
-      showTips && renderTipCanvas(myDataSource, maxPrice, minPrice)
+      showTips && renderTipCanvas()
       canDrag && getDrag()
-      // canScroll && setScroll()
+      canScroll && getScroll()
     } else {
+      // 绘制一串蜡烛
       renderCandles(dataYAxisPoint, candleW)
     }
 

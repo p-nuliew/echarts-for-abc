@@ -6,6 +6,7 @@ import moment from 'moment'
  * @returns
  */
 const request = function (param) {
+  console.log('------------------param: ', param);
   const { pageSize = 10, endTime = '' } = param
   return new Promise((resolved, rejected) => {
     setTimeout(resolved, 500, new Array(pageSize).fill({}).map((item, index) => {
@@ -18,7 +19,8 @@ const request = function (param) {
         closingPice: +('8' + Math.random().toString().slice(2, 4)),
       }
     }))
-
+  }).catch(err => {
+    throw new Error(err)
   })
 }
 
