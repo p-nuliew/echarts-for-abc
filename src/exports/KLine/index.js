@@ -451,6 +451,7 @@ const KLine = ({ initConfig , loadData }) => {
 
       // 请求数据：如果左侧数据小于页数，请求接口数据
       if (myLeftDataSource.length < pageSize) {
+        console.log('myLeftDataSource: ', myLeftDataSource);
         console.log('request: 左侧数据小于页数，请求左侧数据，并赋值给myLeftDataSource');
 
         // 请求数据
@@ -486,24 +487,15 @@ const KLine = ({ initConfig , loadData }) => {
       };
       if (deltaY < 0) {
         console.log('向下、缩小')
-        // 最多展示条数
-        if (myDataSource.length >= maxShowSize) {
-          let requesting = true
-           // 左侧数据为空时，请求数据
-          if (requesting && myLeftDataSource.length === 0) {
-            requesting = false
-            console.log('request: 左侧数据为空，请求左侧数据，并赋值');
-            // 请求数据
-            loadData(pageSize, myDataSource[0].date).then(res => {
-              console.log('请求结束');
-              myLeftDataSource = res
-              requesting = true
-            })
-          }
-          return
+        if (myDataSource.length >= maxShowSize || myLeftDataSource.length === 0 || myLeftDataSource.length < pageSize) {
+          console.log('request: 左侧数据为空，请求左侧数据，并赋值');
+          // 请求数据
+          loadData(pageSize, myDataSource[0].date).then(res => {
+            myLeftDataSource = [...res, ...myLeftDataSource]
+          })
+        } else {
+          myDataSource = [myLeftDataSource.pop(), ...myDataSource]
         }
-
-        myDataSource = [myLeftDataSource.pop(), ...myDataSource]
       }
 
       ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -516,6 +508,7 @@ const KLine = ({ initConfig , loadData }) => {
    */
    const renderKLineChart = () => {
     if (myDataSource.length === 0) return
+    console.log('myDataSource: ', myDataSource);
 
     xAxisItemLength = myDataSource.length
     xAxisItemSpace = xAxisWidth / xAxisItemLength
