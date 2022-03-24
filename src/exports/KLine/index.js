@@ -1,18 +1,5 @@
-import React, { useRef, useEffect, useCallback, useMemo } from 'react'
-import _ from 'lodash'
+import React, { useRef, useEffect } from 'react'
 import './index.css';
-
-// const COLOR = {
-    //   RED: '#EB5454',
-    //   GREEN: '#46B262',
-    //   LINE: '#E3E3E3',
-    //   WHITE: '#FFF',
-    //   BLACK: '#000',
-    // }
-    // const TEXT_COLOR = {
-    //   PRIMARY: '#333',
-    //   SECOND: '#999',
-    // }
 
 const COLOR = {
   PRIMARY: '#365FAD',
@@ -52,16 +39,16 @@ const KLine = ({ initConfig , loadData }) => {
     canDrag: false,
     // 是否可缩放
     canScroll: false,
-    // 最多一页展示多少条数据
+    // 最多一页展示多少条数据（最多20条）
     maxShowSize: 20,
     ...initConfig
   }
 
   const { yAxisSplitNumber, padding, tickWidth, candleW, curveType, showTips, canDrag, canScroll, maxShowSize } = config
 
-  let myDataSource = []
-  let myLeftDataSource = []
-  let myRightDataSource = []
+  let myDataSource = useRef([])
+  let myLeftDataSource = useRef([])
+  let myRightDataSource = useRef([])
 
   // 初始变量
   let ctx = ''
@@ -209,8 +196,8 @@ const KLine = ({ initConfig , loadData }) => {
     if (!tipCanvas.getContext) return
     const ctxTip = tipCanvas.getContext('2d');
 
-    const maxPrice = Math.max(...myDataSource.map(x => x.heightPrice))
-    const minPrice = Math.min(...myDataSource.map(x => x.lowPrice)) - 50
+    const maxPrice = Math.max(...myDataSource.current.map(x => x.heightPrice))
+    const minPrice = Math.min(...myDataSource.current.map(x => x.lowPrice)) - 50
 
     // 提示框元素宽度
     let tipInfoElWidth = 100
@@ -277,7 +264,7 @@ const KLine = ({ initConfig , loadData }) => {
       // 绘制x轴tip文字
       // 获取x轴元素在x轴上的下标
       const xTipIndex = Math.round((offsetX - yAxisPointX) / xAxisWidth * xAxisItemLength)
-      renderText(ctxTip, offsetX, yAxisOriginPointY + xyAxisTipBoxHeight / 2, myDataSource.map((x) => x.date)[xTipIndex] || '', 'center', COLOR.WHITE)
+      renderText(ctxTip, offsetX, yAxisOriginPointY + xyAxisTipBoxHeight / 2, myDataSource.current.map((x) => x.date)[xTipIndex] || '', 'center', COLOR.WHITE)
 
       // 绘制提示框
       let tipInfoPointX = padding.left + xAxisWidth - tipInfoElWidth  //  提示框的开始横坐标
@@ -289,7 +276,7 @@ const KLine = ({ initConfig , loadData }) => {
       ctxTip.fillStyle = COLOR.WHITE
       ctxTip.fill();
 
-      const { date, heightPrice, lowPrice, openingPrice, closingPice } = myDataSource[xTipIndex]
+      const { date, heightPrice, lowPrice, openingPrice, closingPice } = myDataSource.current[xTipIndex]
 
       const dataArr = [
         { label: 'open', value: openingPrice },
@@ -397,16 +384,16 @@ const KLine = ({ initConfig , loadData }) => {
           // 往右拖动
           if (lastPosition < offsetX) {
             // 如果左侧数据全部显示完成，则不绘制
-            if (myLeftDataSource.length === 0) return
+            if (myLeftDataSource.current.length === 0) return
 
-            myDataSource.unshift(myLeftDataSource.pop())
-            myRightDataSource.unshift(myDataSource.pop())
+            myDataSource.current.unshift(myLeftDataSource.current.pop())
+            myRightDataSource.current.unshift(myDataSource.current.pop())
           } else {
             // 往左拖动
-            if (myRightDataSource.length === 0) return
+            if (myRightDataSource.current.length === 0) return
 
-            myDataSource.push(myRightDataSource.shift())
-            myLeftDataSource.push(myDataSource.shift())
+            myDataSource.current.push(myRightDataSource.current.shift())
+            myLeftDataSource.current.push(myDataSource.current.shift())
           }
         }
 
@@ -418,9 +405,9 @@ const KLine = ({ initConfig , loadData }) => {
         ctx.clearRect(0, 0, canvasWidth, canvasHeight)
 
         // _dataSource = {
-        //   leftData: myLeftDataSource,
-        //   data: myDataSource,
-        //   rightData: myRightDataSource
+        //   leftData: myLeftDataSource.current,
+        //   data: myDataSource.current,
+        //   rightData: myRightDataSource.current
 
         // 注意：这种方式会存在闪屏问题（不能用setState）
         // 方法一：监听dataSource, dataSource发生改变时重新渲染renderKLineChart函数
@@ -428,13 +415,7 @@ const KLine = ({ initConfig , loadData }) => {
 
 
         // 方法二：重新执行renderKLineChart函数，那数据要什么时候保存？用什么方式保存？（用全局变量保存，直接赋值，不用useState）
-        // renderKLineChart(myDataSource)
-
-        // TODO 可使用 useRef 优化
-        // 保存数据
-        myDataSource = myDataSource
-        myLeftDataSource = myLeftDataSource
-        myRightDataSource = myRightDataSource
+        // renderKLineChart(myDataSource.current)
 
         renderKLineChart()
       }
@@ -450,13 +431,12 @@ const KLine = ({ initConfig , loadData }) => {
       draggableNode.style.cursor = 'default'
 
       // 请求数据：如果左侧数据小于页数，请求接口数据
-      if (myLeftDataSource.length < pageSize) {
-        console.log('myLeftDataSource: ', myLeftDataSource);
-        console.log('request: 左侧数据小于页数，请求左侧数据，并赋值给myLeftDataSource');
+      if (myLeftDataSource.current.length < pageSize) {
+        console.log('request: 左侧数据小于页数，请求左侧数据，并赋值给myLeftDataSource.current');
 
         // 请求数据
-        loadData(pageSize, myLeftDataSource[0].date).then(res => {
-          myLeftDataSource = [...res, ...myLeftDataSource]
+        loadData(pageSize, myLeftDataSource.current[0].date).then(res => {
+          myLeftDataSource.current = [...res, ...myLeftDataSource.current]
         })
       }
     }, false);
@@ -469,7 +449,7 @@ const KLine = ({ initConfig , loadData }) => {
     // 监听滚轮事件（只考虑chrome）
     // 如需兼容火狐和ie，参考 https://blog.csdn.net/u014205965/article/details/46045099
     kWrapNode.addEventListener('wheel', function(e) {
-      const { deltaX, deltaY, ctrlKey } = e
+      const { deltaX, deltaY } = e
 
       // 方向判断
       if (Math.abs(deltaX) !== 0 && Math.abs(deltaY) !== 0) return console.log('没有固定方向');
@@ -479,22 +459,22 @@ const KLine = ({ initConfig , loadData }) => {
       if (deltaY > 0) {
         console.log('向上、放大');
         // 最小展示条数
-        if (myDataSource.length <= pageSize) return
+        if (myDataSource.current.length <= pageSize) return
 
         // 处理数据
-        myLeftDataSource.push(myDataSource.shift())
-        myRightDataSource.unshift(myDataSource.pop())
+        myLeftDataSource.current.push(myDataSource.current.shift())
+        myRightDataSource.current.unshift(myDataSource.current.pop())
       };
       if (deltaY < 0) {
         console.log('向下、缩小')
-        if (myDataSource.length >= maxShowSize || myLeftDataSource.length === 0 || myLeftDataSource.length < pageSize) {
+        if (myDataSource.current.length >= maxShowSize || myLeftDataSource.current.length === 0 || myLeftDataSource.current.length < pageSize) {
           console.log('request: 左侧数据为空，请求左侧数据，并赋值');
           // 请求数据
-          loadData(pageSize, myDataSource[0].date).then(res => {
-            myLeftDataSource = [...res, ...myLeftDataSource]
+          loadData(pageSize, myDataSource.current[0].date).then(res => {
+            myLeftDataSource.current = [...res, ...myLeftDataSource.current]
           })
         } else {
-          myDataSource = [myLeftDataSource.pop(), ...myDataSource]
+          myDataSource.current = [myLeftDataSource.current.pop(), ...myDataSource.current]
         }
       }
 
@@ -507,15 +487,15 @@ const KLine = ({ initConfig , loadData }) => {
    * 绘制k线图
    */
    const renderKLineChart = () => {
-    if (myDataSource.length === 0) return
-    console.log('myDataSource: ', myDataSource);
+    if (myDataSource.current.length === 0) return
+    console.log('myDataSource.current: ', myDataSource.current);
 
-    xAxisItemLength = myDataSource.length
+    xAxisItemLength = myDataSource.current.length
     xAxisItemSpace = xAxisWidth / xAxisItemLength
 
     const remainder = Math.ceil(xAxisItemLength / 5)
-    const maxPrice = Math.max(...myDataSource.map(x => x.heightPrice))
-    const minPrice = Math.min(...myDataSource.map(x => x.lowPrice)) - 50
+    const maxPrice = Math.max(...myDataSource.current.map(x => x.heightPrice))
+    const minPrice = Math.min(...myDataSource.current.map(x => x.lowPrice)) - 50
 
 
     console.log('--------开始绘制k线图');
@@ -532,7 +512,7 @@ const KLine = ({ initConfig , loadData }) => {
     }
 
     // 纵坐标集合
-    const dataYAxisPoint = myDataSource.map(it => {
+    const dataYAxisPoint = myDataSource.current.map(it => {
       const newIt = {}
       for (const key in it) {
         if (key === 'date') continue
@@ -566,7 +546,7 @@ const KLine = ({ initConfig , loadData }) => {
 
       // 隔点展示
       if (i % remainder === 0 || i === xAxisItemLength - 1) {
-        renderText(ctx, xAxisTickX, yAxisOriginPointY + tickWidth + 10, myDataSource.map((x) => x.date)[i], 'center', TEXT_COLOR.PRIMARY)
+        renderText(ctx, xAxisTickX, yAxisOriginPointY + tickWidth + 10, myDataSource.current.map((x) => x.date)[i], 'center', TEXT_COLOR.PRIMARY)
         renderLine(xAxisTickX, yAxisOriginPointY, xAxisTickX, yAxisOriginPointY + tickWidth, COLOR.LINE)
       }
     }
@@ -707,8 +687,8 @@ const KLine = ({ initConfig , loadData }) => {
       const data = res;
       pageSize = res.length / 2
 
-      myDataSource = data.slice(pageSize)
-      myLeftDataSource = data.slice(0, pageSize)
+      myDataSource.current = data.slice(pageSize)
+      myLeftDataSource.current = data.slice(0, pageSize)
       renderKLineChart()
     })
   }, [])
